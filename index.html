@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mango Object Detection</title>
+    <style>
+        /* จัดตำแหน่งวิดีโอและ canvas ให้ซ้อนกันพอดี */
+        .container {
+            position: relative;
+            width: 100%;
+            max-width: 640px; /* จำกัดขนาดสูงสุด */
+        }
+        #videoElement, #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: auto;
+        }
+        #videoElement {
+            /* วิดีโอควรอยู่ข้างหลังเพื่อให้มองเห็นกรอบ */
+            z-index: 1; 
+            border: 1px solid black;
+        }
+        #canvas {
+            /* Canvas อยู่ข้างหน้าเพื่อวาดกรอบ */
+            z-index: 2;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🥭 ระบบตรวจจับมะม่วง (Real-time)</h1>
+    <button id="startButton">เริ่มกล้องและตรวจจับ</button>
+    <p id="status">สถานะ: รอโหลดโมเดล...</p>
+
+    <div class="container">
+        <video id="videoElement" autoplay playsinline></video>
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm/dist/tf-backend-wasm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+
+    <script>
+        const video = document.getElementById('videoElement');
+        const canvas = document.getElementById('canvas');
+        const statusEl = document.getElementById('status');
+        const startButton = document.getElementById('startButton');
+        const ctx = canvas.getContext('2d');
+        
+        let model = undefined;
+        let animationFrameId;
+
+        // 1. โหลดโมเดล ML ก่อน
+        async function loadModel() {
+            try {
+                statusEl.textContent = 'สถานะ: กำลังโหลดโมเดล... (อาจใช้เวลา 10-30 วินาที)';
+                
+                // ใช้โมเดล coco-ssd ที่ฝึกมาแล้ว
+                model = await cocoSsd.load(); 
+                
+                statusEl.textContent = 'สถานะ: โหลดโมเดลสำเร็จ! กดปุ่มเพื่อเริ่ม';
+                startButton.disabled = false;
+            } catch (error) {
+                statusEl.textContent = 'สถานะ: โหลดโมเดลล้มเหลว';
+                console.error("Error loading model:", error);
+            }
+        }
+
+        // 2. เริ่มต้นกล้อง
+        async function startCamera() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert("เบราว์เซอร์ไม่รองรับกล้อง");
+                return;
+            }
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment" },
+                    audio: false
+                });
+
+                video.srcObject = stream;
+                
+                // เมื่อวิดีโอพร้อมเล่นแล้ว ให้เริ่มการตรวจจับ
+                video.onloadeddata = () => {
+                    // กำหนดขนาด Canvas ให้ตรงกับขนาดวิดีโอ (สำคัญมาก)
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    
+                    // ปรับขนาด Container ให้เหมาะสม
+                    document.querySelector('.container').style.height = `${video.offsetHeight}px`;
+                    
+                    statusEl.textContent = 'สถานะ: กำลังตรวจจับวัตถุ...';
+                    detectFrame(); // เริ่มลูปการตรวจจับ
+                };
+
+                startButton.style.display = 'none';
+
+            } catch (err) {
+                alert("เปิดกล้องไม่ได้: " + err.name + ". (ตรวจสอบ HTTPS)");
+                console.error(err);
+            }
+        }
+
+        // 3. ฟังก์ชันหลักสำหรับตรวจจับแบบเรียลไทม์
+        async function detectFrame() {
+            if (!model) return;
+            
+            // ใช้ Coco SSD ตรวจจับวัตถุในเฟรมวิดีโอปัจจุบัน
+            const predictions = await model.detect(video); 
+
+            // ล้าง Canvas ก่อนวาดใหม่
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // วาดกรอบสี่เหลี่ยมและข้อความสำหรับวัตถุที่ตรวจจับได้
+            predictions.forEach(prediction => {
+                // ตรวจสอบว่า Class ที่ตรวจจับได้คือ "apple" หรือ "orange" หรือ "other fruit"
+                // โค้ด SSD COCO ไม่ได้มี "mango" โดยตรง แต่บางครั้งอาจจำแนกเป็นผลไม้อื่น เช่น "apple" หรือ "orange"
+                // หากคุณต้องการ "มะม่วง" โดยเฉพาะ ต้องฝึกโมเดลเอง
+                
+                // ในที่นี้ เราจะกำหนดให้มันเป็น 'มะม่วง' หากเป็นผลไม้ที่คล้ายกัน
+                const classLabel = prediction.class;
+                
+                if (classLabel === 'apple' || classLabel === 'orange' || classLabel === 'banana') {
+                    
+                    const [x, y, width, height] = prediction.bbox;
+                    const displayLabel = 'มะม่วง? (' + classLabel + ')'; // แสดงผลเป็นมะม่วง
+
+                    // ตั้งค่าสไตล์การวาด
+                    ctx.beginPath();
+                    ctx.lineWidth = "4";
+                    ctx.strokeStyle = "red";
+                    ctx.rect(x, y, width, height); // วาดสี่เหลี่ยม
+                    ctx.stroke();
+
+                    // วาดข้อความ
+                    ctx.fillStyle = "red";
+                    ctx.font = "18px Arial";
+                    ctx.fillText(displayLabel + " (" + Math.round(prediction.score * 100) + "%)", x, y > 10 ? y - 5 : 10);
+                }
+            });
+            
+            // วนซ้ำการตรวจจับ (เพื่อให้เป็นแบบเรียลไทม์)
+            animationFrameId = requestAnimationFrame(detectFrame);
+        }
+
+        // --- เริ่มต้นการทำงาน ---
+        startButton.disabled = true;
+        startButton.addEventListener('click', startCamera);
+        loadModel(); // เริ่มโหลดโมเดลทันที
+        
+        // ปิดการวนลูปเมื่อผู้ใช้ออกจากหน้า
+        window.onbeforeunload = () => {
+            cancelAnimationFrame(animationFrameId);
+        };
+        
+    </script>
+
+</body>
+</html>
