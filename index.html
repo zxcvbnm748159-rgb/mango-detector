@@ -124,7 +124,7 @@
                 // ในที่นี้ เราจะกำหนดให้มันเป็น 'มะม่วง' หากเป็นผลไม้ที่คล้ายกัน
                 const classLabel = prediction.class;
                 
-                //if (classLabel === 'apple' || classLabel === 'orange' || classLabel === 'banana') {
+                if (classLabel === 'Green' || classLabel === 'Yellow' || classLabel === 'Yellow') {
                     
                     const [x, y, width, height] = prediction.bbox;
                     const displayLabel = 'มะม่วง? (' + classLabel + ')'; // แสดงผลเป็นมะม่วง
