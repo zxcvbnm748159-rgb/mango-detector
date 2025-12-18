@@ -130,14 +130,14 @@
                     console.log(cs)
                 }
 
-                if (classLabel === 'apple'  classLabel === 'orange'  classLabel === 'banana') {
+                if (classLabel === 'apple' || classLabel === 'orange' || classLabel === 'banana') {
 
                     const [x, y, width, height] = prediction.bbox;
                     if (classLabel === 'apple')
                     {
                         classLabel = 'มะม่วง';
                     }
-                    const displayLabel = 'มะม่วง? (' + classLabel + ')'; // แสดงผลเป็นมะม่วง
+                    const displayLabel = 'มะม่วง'; // แสดงผลเป็นมะม่วง
 
                     // ตั้งค่าสไตล์การวาด
                     ctx.beginPath();
