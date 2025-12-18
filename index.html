@@ -122,12 +122,22 @@
                 // หากคุณต้องการ "มะม่วง" โดยเฉพาะ ต้องฝึกโมเดลเอง
                 
                 // ในที่นี้ เราจะกำหนดให้มันเป็น 'มะม่วง' หากเป็นผลไม้ที่คล้ายกัน
-                const classLabel = prediction.class;
-                
-                if (classLabel === 'Apple' || classLabel === 'Orange' || classLabel === 'Banana' | {
-                    
+                let classLabel = prediction.class;
+                let cs = classLabel
+                console.log(cs)
+                if(cs == 'apple'){
+                    cs = 'มะม่วง'
+                    console.log(cs)
+                }
+
+                if (classLabel === 'apple'  classLabel === 'orange'  classLabel === 'banana') {
+
                     const [x, y, width, height] = prediction.bbox;
-                    const displayLabel = 'มะม่วง'; // แสดงผลเป็นมะม่วง
+                    if (classLabel === 'apple')
+                    {
+                        classLabel = 'มะม่วง';
+                    }
+                    const displayLabel = 'มะม่วง? (' + classLabel + ')'; // แสดงผลเป็นมะม่วง
 
                     // ตั้งค่าสไตล์การวาด
                     ctx.beginPath();
